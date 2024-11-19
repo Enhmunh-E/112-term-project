@@ -8,6 +8,7 @@
 
 from cmu_graphics import *
 import math
+import copy
 
 
 class Object:
@@ -49,8 +50,8 @@ class World:
     def __init__(self):
         self.blocks = []
 
-    def createBlock(self, position=(0, 0, 0)):
-        newBlock = Block(position)
+    def createBlock(self, position=(0, 0, 0), color=None):
+        newBlock = Block(position, color)
         self.blocks.append(newBlock)
 
     def getAllBlocks(self):
@@ -58,7 +59,8 @@ class World:
 
 
 class Block(Object):
-    def __init__(self, position=(0, 0, 0)):
+    def __init__(self, position=(0, 0, 0), color=None):
+        self.position = position
         x, y, z = position
         self.vertices = [
             (x, y, z),
@@ -108,17 +110,20 @@ class Block(Object):
                 self.vertices[5],
             ],  # Right face
         ]
-        self.colors = [
-            None,
-            "green",
-            None,
-            None,
-            None,
-            None,
-        ]
+        self.colors = [color] * 6
 
     def __str__(self):
         return f"Block: {self.vertices}"
+
+    def sortPlanes(self, position):
+        def closestVerticy(plane):
+            a = copy.copy(plane)
+            a.sort(key=lambda x: getDistance(x, position), reverse=True)
+            return a[0]
+
+        self.planes.sort(
+            key=lambda x: getDistance(closestVerticy(x), position), reverse=True
+        )
 
     def draw(self, app):
         index = 0
@@ -127,23 +132,47 @@ class Block(Object):
             for point in plane:
                 x, y = getPositionOnScreen(app, point)
                 points += [x, y]
-            drawPolygon(*points, fill=self.colors[index], border="black")
+            drawPolygon(
+                *points, fill=self.colors[index], border="black", borderWidth=0.4
+            )
             index += 1
 
+    def getDistanceBy(self, point):
+        return getDistance(self.position, point)
 
-WIDTH, HEIGHT = 800, 800
+
+def getDistance(point1, point2):
+    x1, y1, z1 = point1
+    x2, y2, z2 = point2
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2) ** (1 / 2)
+
+
+WIDTH, HEIGHT = 1020, 800
 MAXRES = max(WIDTH, HEIGHT)
 
 
 def onAppStart(app):
-    app.RES = app.WIDTH, app.HEIGHT = 800, 800
+    app.RES = app.WIDTH, app.HEIGHT = WIDTH, HEIGHT
     app.camera = Camera()
     app.dragStartingPosition = None
     app.world = World()
-    app.world.createBlock((0, 0, 0))
-    app.world.createBlock((0, 1, 0))
-    app.world.createBlock((0, 0, 1))
-    app.world.createBlock((1, 0, 0))
+    app.world.createBlock((0, 0, 0), "saddleBrown")
+    app.world.createBlock((0, 0, 1), "saddleBrown")
+    app.world.createBlock((0, 0, 2), "saddleBrown")
+    app.world.createBlock((0, 0, 3), "saddleBrown")
+    app.world.createBlock((0, 0, 4), "saddleBrown")
+    for i in range(-2, 3):
+        for j in range(-2, 3):
+            for l in range(2):
+                app.world.createBlock((0 + i, 0 + j, 2 + l), "oliveDrab")
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            app.world.createBlock((0 + i, 0 + j, 4), "oliveDrab")
+    app.world.createBlock((0, 0, 5), "oliveDrab")
+    app.world.createBlock((0, 1, 5), "oliveDrab")
+    app.world.createBlock((0, -1, 5), "oliveDrab")
+    app.world.createBlock((1, 0, 5), "oliveDrab")
+    app.world.createBlock((-1, 0, 5), "oliveDrab")
     pass
 
 
@@ -175,7 +204,10 @@ def getPositionOnScreen(app, pos):
 
 
 def redrawAll(app):
+    blocks = app.world.getAllBlocks()
+    blocks.sort(key=lambda x: x.getDistanceBy(app.camera.position), reverse=True)
     for block in app.world.getAllBlocks():
+        block.sortPlanes(app.camera.position)
         block.draw(app)
 
 
@@ -198,17 +230,38 @@ def onKeyHold(app, keys):
         app.camera.changePositionZ(app.camera.position[2] - 1 / 5)
 
     if "w" in keys:
-        app.camera.changeOrientation(0, math.pi / 18 / 5, 0)
+        x, y, z = app.camera.orientation
+        app.camera.changePositionX(app.camera.position[0] - 1 / 5 * math.cos(z))
+        app.camera.changePositionY(app.camera.position[1] - 1 / 5 * math.sin(z))
+        app.camera.changePositionZ(app.camera.position[2] - 1 / 5 * math.cos(y))
     if "s" in keys:
-        app.camera.changeOrientation(0, -math.pi / 18 / 5, 0)
-    if "d" in keys:
-        app.camera.changeOrientation(0, 0, math.pi / 18 / 5)
+        x, y, z = app.camera.orientation
+        app.camera.changePositionX(app.camera.position[0] + 1 / 5 * math.cos(z))
+        app.camera.changePositionY(app.camera.position[1] + 1 / 5 * math.sin(z))
+        app.camera.changePositionZ(app.camera.position[2] + 1 / 5 * math.cos(y))
     if "a" in keys:
-        app.camera.changeOrientation(0, 0, -math.pi / 18 / 5)
+        x, y, z = app.camera.orientation
+        app.camera.changePositionX(
+            app.camera.position[0] - 1 / 5 * math.cos(z + math.pi / 2)
+        )
+        app.camera.changePositionY(
+            app.camera.position[1] - 1 / 5 * math.sin(z + math.pi / 2)
+        )
+        # app.camera.changePositionZ(app.camera.position[2] - 1 / 5 * math.cos(y))
+    if "d" in keys:
+        x, y, z = app.camera.orientation
+        app.camera.changePositionX(
+            app.camera.position[0] + 1 / 5 * math.cos(z + math.pi / 2)
+        )
+        app.camera.changePositionY(
+            app.camera.position[1] + 1 / 5 * math.sin(z + math.pi / 2)
+        )
+        # app.camera.changePositionZ(app.camera.position[2] + 1 / 5 * math.cos(y))
+
     pass
 
 
-def onMouseDrag(app, mouseX, mouseY, button):
+def onMouseDrag(app, mouseX, mouseY):
     # if button == 2:
     # Right Click
     if app.dragStartingPosition:
@@ -216,10 +269,9 @@ def onMouseDrag(app, mouseX, mouseY, button):
         disX = app.dragStartingPosition[0] - mouseX
         disY = app.dragStartingPosition[1] - mouseY
         app.camera.changeOrientation(
-            0, math.pi / 180 * disY / 100, math.pi / 180 * disX / 100
+            0, math.pi / 180 * disY / 10, math.pi / 180 * disX / 10
         )
-    else:
-        app.dragStartingPosition = (mouseX, mouseY)
+    app.dragStartingPosition = (mouseX, mouseY)
 
 
 def onMouseRelease(app, mouseX, mouseY, button):
@@ -231,38 +283,7 @@ def onStep(app):
 
 
 def main():
-    runApp(800, 800)
+    runApp(WIDTH, HEIGHT)
 
 
 main()
-
-
-# def flatten(xss):
-#     return [x for xs in xss for x in xs]
-# a = (
-#     np.matrix(
-#         [
-#             [1, 0, 0],
-#             [0, math.cos(COx), math.sin(COx)],
-#             [0, -math.sin(COx), math.cos(COx)],
-#         ]
-#     )
-#     * np.matrix(
-#         [
-#             [math.cos(COy), 0, -math.sin(COy)],
-#             [0, 1, 0],
-#             [math.sin(COy), 0, math.cos(COy)],
-#         ]
-#     )
-#     * np.matrix(
-#         [
-#             [math.cos(COz), math.sin(COz), 0],
-#             [-math.sin(COz), math.cos(COz), 0],
-#             [0, 0, 1],
-#         ]
-#     )
-#     * (np.matrix([[x], [y], [z]]) - np.matrix([[Cx], [Cy], [Cz]]))
-# )
-
-# a = a.flatten().getA()[0]
-# x, y, z = a
