@@ -131,28 +131,6 @@ class Block(Object):
             key=lambda x: getDistance(centerVerticy(x), position), reverse=True
         )
 
-    # def draw(self, app, color):
-    #     index = 0
-    #     for plane in self.planes:
-    #         points = []
-    #         for point in plane:
-    #             p = getPositionOnScreen(app, point)
-    #             if p:
-    #                 x, y = p
-    #                 points += [(x, y)]
-    #         newPoints = []
-    #         for i in range(-1, len(points) - 1):
-    #             point1 = points[i]
-    #             point2 = points[i + 1]
-    #             clippedLine = cohenSutherlandClip(
-    #                 point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
-    #             )
-    #             if clippedLine:
-    #                 newPoints += [clippedLine[0], clippedLine[1]]
-    #                 newPoints += [clippedLine[2], clippedLine[3]]
-    #         drawPolygon(*newPoints, fill=color, border="black", borderWidth=0.4)
-    #         index += 1
-
     def getDistanceBy(self, point):
         return getDistance(self.position, point)
 
@@ -252,8 +230,8 @@ def onAppStart(app):
     app.dragStartingPosition = None
     app.world = World()
 
-    for i in range(-6, 7):
-        for j in range(-6, 7):
+    for i in range(-7, 8):
+        for j in range(-7, 8):
             app.world.createBlock((i, j, 0), "green")
     app.world.createBlock((0, 0, 1), "brown")
     app.world.createBlock((0, 0, 2), "brown")
@@ -324,14 +302,6 @@ def getPositionOnScreen(app, pos):
     return posOnScreenY, posOnScreenX
 
 
-def getNearbyBlocks(app):
-    blocks = []
-    for block in app.world.getAllBlocks():
-        if isBlockInView(block.position, app.camera.position, app.camera.orientation):
-            blocks.append(block)
-    return blocks
-
-
 def getPlanesFromBlocks(blocks):
     planes = dict()
     for block in blocks:
@@ -378,125 +348,62 @@ def drawPlane(plane, app, color):
     drawPolygon(*newPoints, fill=color, border="black", borderWidth=0.4)
 
 
-def isBlockInView(position, cameraPosition, cameraOrientation):
-    relative_position = (
-        position[0] - cameraPosition[0],
-        position[1] - cameraPosition[1],
-        position[2] - cameraPosition[2],
-    )
-    distance = math.sqrt(relative_position[0] ** 2 + relative_position[1] ** 2)
-    if distance == 0:
-        return False  # No valid direction if block is at the camera position
-    # Camera vector
-    camera_forward = (
-        math.cos(cameraOrientation[2] - math.pi),  # x-component
-        math.sin(cameraOrientation[2] - math.pi),  # y-component
-    )
-    # Relative position vector in 2D
-    relative_vector = (relative_position[0], relative_position[1])
-
-    # Dot product to determine if block is in front
-    dot_product = (
-        camera_forward[0] * relative_vector[0] + camera_forward[1] * relative_vector[1]
-    )
-
-    if dot_product <= 0:
-        return False  # Block is behind the camera
-
-    # Calculate the angle of the block relative to the camera
-    angle = math.atan2(relative_vector[1], relative_vector[0])
-
-    # Adjust angle to be relative to the camera's orientation
-    relative_angle = angle - cameraOrientation[2] - math.pi
-
-    # Normalize the relative angle to [-π, π)
-    relative_angle = (relative_angle + math.pi) % (2 * math.pi) - math.pi
-
-    # Check if the relative angle is within the field of view (π/4)
-    fov = math.pi / 2
-    return abs(relative_angle) <= fov
-
-
 def redrawAll(app):
-    blocks = getNearbyBlocks(app)
+    blocks = app.world.getAllBlocks()
     if len(blocks) == 0:
         return
     planes = getPlanesFromBlocks(blocks)
     sortPlanesToCamera(planes, app.camera.position)
     for plane in planes:
         drawPlane(plane, app, "green")
-    # dist = blocks[0].getDistanceBy(app.camera.position)
-    # for block in app.world.getAllBlocks():
-    #     d = block.getDistanceBy(app.camera.position)
-    #     if dist == 0:
-    #         color = rgb(0, 0, 0)
-    #     else:
-    #         num = math.floor(d / dist * 765)
-    #         if num >= 255:
-    #             r = 255
-    #             if num >= 255 * 2:
-    #                 g = 255
-    #                 b = (num - 255 * 2) % 256
-    #             else:
-    #                 g = num - 255
-    #                 b = 0
-    #         else:
-    #             r = num
-    #             g = 0
-    #             b = 0
-
-    #         color = rgb(r, g, b)
-
-    #     block.sortPlanes(app.camera.position)
-    #     block.draw(app, "green")
 
 
 def onKeyHold(app, keys):
     if "down" in keys:
-        app.camera.changePositionX(app.camera.position[0] + 1 / 5)
+        app.camera.changePositionX(app.camera.position[0] + 1)
     if "up" in keys:
-        app.camera.changePositionX(app.camera.position[0] - 1 / 5)
+        app.camera.changePositionX(app.camera.position[0] - 1)
 
     if "right" in keys:
-        app.camera.changePositionY(app.camera.position[1] + 1 / 5)
+        app.camera.changePositionY(app.camera.position[1] + 1)
 
     if "left" in keys:
-        app.camera.changePositionY(app.camera.position[1] - 1 / 5)
+        app.camera.changePositionY(app.camera.position[1] - 1)
 
     if "," in keys:
-        app.camera.changePositionZ(app.camera.position[2] + 1 / 5)
+        app.camera.changePositionZ(app.camera.position[2] + 1)
 
     if "." in keys:
-        app.camera.changePositionZ(app.camera.position[2] - 1 / 5)
+        app.camera.changePositionZ(app.camera.position[2] - 1)
 
     if "w" in keys:
         x, y, z = app.camera.orientation
-        app.camera.changePositionX(app.camera.position[0] - 1 / 5 * math.cos(z))
-        app.camera.changePositionY(app.camera.position[1] - 1 / 5 * math.sin(z))
-        app.camera.changePositionZ(app.camera.position[2] - 1 / 5 * math.cos(y))
+        app.camera.changePositionX(app.camera.position[0] - 0.4 * math.cos(z))
+        app.camera.changePositionY(app.camera.position[1] - 0.4 * math.sin(z))
+        app.camera.changePositionZ(app.camera.position[2] - 0.4 * math.cos(y))
     if "s" in keys:
         x, y, z = app.camera.orientation
-        app.camera.changePositionX(app.camera.position[0] + 1 / 5 * math.cos(z))
-        app.camera.changePositionY(app.camera.position[1] + 1 / 5 * math.sin(z))
-        app.camera.changePositionZ(app.camera.position[2] + 1 / 5 * math.cos(y))
+        app.camera.changePositionX(app.camera.position[0] + 0.4 * math.cos(z))
+        app.camera.changePositionY(app.camera.position[1] + 0.4 * math.sin(z))
+        app.camera.changePositionZ(app.camera.position[2] + 0.4 * math.cos(y))
     if "a" in keys:
         x, y, z = app.camera.orientation
         app.camera.changePositionX(
-            app.camera.position[0] - 1 / 5 * math.cos(z + math.pi / 2)
+            app.camera.position[0] - 0.4 * math.cos(z + math.pi / 2)
         )
         app.camera.changePositionY(
-            app.camera.position[1] - 1 / 5 * math.sin(z + math.pi / 2)
+            app.camera.position[1] - 0.4 * math.sin(z + math.pi / 2)
         )
-        # app.camera.changePositionZ(app.camera.position[2] - 1 / 5 * math.cos(y))
+        # app.camera.changePositionZ(app.camera.position[2] - 1/3 * math.cos(y))
     if "d" in keys:
         x, y, z = app.camera.orientation
         app.camera.changePositionX(
-            app.camera.position[0] + 1 / 5 * math.cos(z + math.pi / 2)
+            app.camera.position[0] + 0.4 * math.cos(z + math.pi / 2)
         )
         app.camera.changePositionY(
-            app.camera.position[1] + 1 / 5 * math.sin(z + math.pi / 2)
+            app.camera.position[1] + 0.4 * math.sin(z + math.pi / 2)
         )
-        # app.camera.changePositionZ(app.camera.position[2] + 1 / 5 * math.cos(y))
+        # app.camera.changePositionZ(app.camera.position[2] + 1/3 * math.cos(y))
 
     pass
 
