@@ -10,6 +10,12 @@ from cmu_graphics import *
 import math
 import copy
 
+#################################################
+#                                               #
+#               Necessary Classes               #
+#                                               #
+#################################################
+
 
 class Object:
     def __init__(self, position=(0, 0, 0), vertices=[], orientation=(0, 0, 0)):
@@ -49,10 +55,14 @@ class Camera(Object):
 class World:
     def __init__(self):
         self.blocks = []
+        self.blockPositionsStringSet = []
 
     def createBlock(self, position=(0, 0, 0), color=None):
         newBlock = Block(position, color)
         self.blocks.append(newBlock)
+        self.blockPositionsStringSet.append(
+            f"{position[0]},{position[1]},{position[2]}"
+        )
 
     def getAllBlocks(self):
         return self.blocks
@@ -63,14 +73,14 @@ class Block(Object):
         self.position = position
         x, y, z = position
         self.vertices = [
-            (x, y, z),
-            (x + 1, y, z),
-            (x + 1, y + 1, z),
-            (x, y + 1, z),
-            (x, y, z + 1),
-            (x + 1, y, z + 1),
-            (x + 1, y + 1, z + 1),
-            (x, y + 1, z + 1),
+            (x - 0.5, y - 0.5, z - 0.5),
+            (x + 0.5, y - 0.5, z - 0.5),
+            (x + 0.5, y + 0.5, z - 0.5),
+            (x - 0.5, y + 0.5, z - 0.5),
+            (x - 0.5, y - 0.5, z + 0.5),
+            (x + 0.5, y - 0.5, z + 0.5),
+            (x + 0.5, y + 0.5, z + 0.5),
+            (x - 0.5, y + 0.5, z + 0.5),
         ]
         self.planes = [
             [
@@ -135,6 +145,12 @@ class Block(Object):
         return getDistance(self.position, point)
 
 
+#################################################
+#                                               #
+#               Helper Functions                #
+#                                               #
+#################################################
+
 # https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
 # Define region codes
 INSIDE = 0  # 0000
@@ -159,7 +175,7 @@ def compute_region_code(x, y, x_min, y_min, x_max, y_max):
 
 def sortPlanesToCamera(planes, position):
     def closestVerticy(plane):
-        a = copy.copy(plane)
+        a = copy.copy(plane[0])
         a.sort(key=lambda x: getDistance(x, position), reverse=True)
         return a[0]
 
@@ -219,16 +235,154 @@ def getDistance(point1, point2):
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2) ** (1 / 2)
 
 
-WIDTH, HEIGHT = 1020, 800
+def getPositionOnScreen(app, pos):
+    x, y, z = pos
+    COx, COy, COz = app.camera.orientation
+    Cpx, Cpy, Cpz = app.camera.position
+
+    # Differences between point and camera position
+    difX = x - Cpx
+    difY = y - Cpy
+    difZ = z - Cpz
+
+    # Sine and cosine of orientation angles
+    SinX = math.sin(COx)
+    SinY = math.sin(COy)
+    SinZ = math.sin(COz)
+    CosX = math.cos(COx)
+    CosY = math.cos(COy)
+    CosZ = math.cos(COz)
+
+    # Transform world coordinates into camera space (verify correctness)
+    X = CosY * (SinZ * difY + CosZ * difX) - SinY * difZ
+    Y = SinX * (CosY * difZ + SinY * (SinZ * difY + CosZ * difX)) + CosX * (
+        CosZ * difY - SinZ * difX
+    )
+    Z = CosX * (CosY * difZ + SinY * (SinZ * difY + CosZ * difX)) - SinX * (
+        CosZ * difY - SinZ * difX
+    )
+
+    # Discard points behind the camera or outside clipping planes
+    near_plane = 0.1
+    far_plane = 1000
+    if Z >= 0 or Z < -far_plane or Z > -near_plane:
+        return None
+
+    # Perspective divide and aspect ratio adjustment
+    py = Y / -Z
+    px = X / -Z
+    aspect_ratio = app.WIDTH / app.HEIGHT
+    px /= aspect_ratio
+
+    # Map to screen space
+    py_map = (1 + py) / 2
+    px_map = (1 + px) / 2
+
+    posOnScreenY = int(py_map * app.HEIGHT)
+    posOnScreenX = int(px_map * app.WIDTH)
+
+    return posOnScreenY, posOnScreenX
+
+
+# Returns array of tuple (plane, selected)
+def getPlanesFromBlocks(app, blocks):
+    planes = dict()
+    for block in blocks:
+        for plane in block.planes:
+            planeStr = ""
+            i = 0
+            for v in plane:
+                if i == 0:
+                    planeStr += f"{v[0]},{v[1]},{v[2]}"
+                else:
+                    planeStr += f";{v[0]},{v[1]},{v[2]}"
+                i += 1
+            if planeStr not in planes:
+                planes[planeStr] = {
+                    "count": 0,
+                    "selected": block.position == app.selectedBlockPosition,
+                }
+            planes[planeStr]["count"] += 1
+    planesArr = []
+    for planeStr in planes:
+        if planes[planeStr]["count"] == 1:
+            a = planeStr.split(";")
+            b = []
+            for aa in a:
+                x, y, z = aa.split(",")
+                b.append((float(x), float(y), float(z)))
+            planesArr.append((b, planes[planeStr]["selected"]))
+    return planesArr
+
+
+def drawPlane(plane, app, color):
+    points = []
+    for point in plane[0]:
+        p = getPositionOnScreen(app, point)
+        if p:
+            x, y = p
+            points += [(x, y)]
+    newPoints = []
+    for i in range(-1, len(points) - 1):
+        point1 = points[i]
+        point2 = points[i + 1]
+        clippedLine = cohenSutherlandClip(
+            point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
+        )
+        if clippedLine:
+            newPoints += [clippedLine[0], clippedLine[1]]
+            newPoints += [clippedLine[2], clippedLine[3]]
+    drawPolygon(
+        *newPoints,
+        fill=color,
+        border="red" if plane[1] == True else "black",
+        borderWidth=2 if plane[1] == True else 0.4,
+    )
+
+
+def findSelectedBlockPosition(app):
+    app.selectedBlockPosition = None
+    camX, camY, camZ = copy.copy(app.camera.position)
+    x, y, z = app.camera.orientation
+    stepX = math.cos(z)
+    stepY = math.sin(z)
+    stepZ = math.cos(y)
+    posX = camX
+    posY = camY
+    posZ = camZ
+    for i in range(100):
+        posX = posX - stepX
+        posY = posY - stepY
+        posZ = posZ - stepZ
+        if (
+            f"{rounded(posX)},{rounded(posY)},{rounded(posZ)}"
+            in app.world.blockPositionsStringSet
+        ):
+            app.selectedBlockPosition = (
+                rounded(posX),
+                rounded(posY),
+                rounded(posZ),
+            )
+            return
+
+
+#################################################
+#                                               #
+#               Drawing Functions               #
+#                                               #
+#################################################
+
+WIDTH, HEIGHT = 800, 800
 MAXRES = max(WIDTH, HEIGHT)
 
 
 def onAppStart(app):
     app.setMaxShapeCount(100000)
     app.RES = app.WIDTH, app.HEIGHT = WIDTH, HEIGHT
-    app.camera = Camera()
+    app.camera = Camera((0, 0, 0), [], (0, math.pi / 2, 0))
     app.dragStartingPosition = None
     app.world = World()
+    app.selectedBlockPosition = None
 
     for i in range(-7, 8):
         for j in range(-7, 8):
@@ -252,138 +406,48 @@ def onAppStart(app):
     app.world.createBlock((0, -1, 6), "brown")
     app.world.createBlock((0, 1, 6), "brown")
 
-    pass
-
-
-def getPositionOnScreen(app, pos):
-    x, y, z = pos
-    COx, COy, COz = app.camera.orientation
-    Cx, Cy, Cz = app.camera.position
-
-    # Calculate differences between point and camera position
-    difX = x - Cx
-    difY = y - Cy
-    difZ = z - Cz
-
-    # Calculate sine and cosine of orientation angles
-    Sx = math.sin(COx)
-    Sy = math.sin(COy)
-    Sz = math.sin(COz)
-    Cx = math.cos(COx)
-    Cy = math.cos(COy)
-    Cz = math.cos(COz)
-
-    # Transform world coordinates into camera space
-    X = Cy * (Sz * difY + Cz * difX) - Sy * difZ
-    Y = Sx * (Cy * difZ + Sy * (Sz * difY + Cz * difX)) + Cx * (Cz * difY - Sz * difX)
-    Z = Cx * (Cy * difZ + Sy * (Sz * difY + Cz * difX)) - Sx * (Cz * difY - Sz * difX)
-
-    # Discard points behind the camera or outside clipping planes
-    near_plane = 0.1
-    far_plane = 1000
-    if Z >= 0 or Z < -far_plane or Z > -near_plane:
-        return None
-
-    # Perspective divide to map to normalized device coordinates (-1 to 1)
-    py = Y / -Z
-    px = X / -Z
-
-    # Adjust for aspect ratio
-    aspect_ratio = app.WIDTH / app.HEIGHT
-    px /= aspect_ratio
-
-    # Map normalized device coordinates to screen space
-    py_map = (1 + py) / 2
-    px_map = (1 + px) / 2
-
-    posOnScreenY = int(py_map * app.HEIGHT)
-    posOnScreenX = int(px_map * app.WIDTH)
-
-    return posOnScreenY, posOnScreenX
-
-
-def getPlanesFromBlocks(blocks):
-    planes = dict()
-    for block in blocks:
-        for plane in block.planes:
-            planeStr = ""
-            i = 0
-            for v in plane:
-                if i == 0:
-                    planeStr += f"{v[0]},{v[1]},{v[2]}"
-                else:
-                    planeStr += f";{v[0]},{v[1]},{v[2]}"
-                i += 1
-            planes[planeStr] = planes.get(planeStr, 0)
-            planes[planeStr] += 1
-    planesArr = []
-    for planeStr in planes:
-        if planes[planeStr] == 1:
-            a = planeStr.split(";")
-            b = []
-            for aa in a:
-                x, y, z = aa.split(",")
-                b.append((int(x), int(y), int(z)))
-            planesArr.append(b)
-    return planesArr
-
-
-def drawPlane(plane, app, color):
-    points = []
-    for point in plane:
-        p = getPositionOnScreen(app, point)
-        if p:
-            x, y = p
-            points += [(x, y)]
-    newPoints = []
-    for i in range(-1, len(points) - 1):
-        point1 = points[i]
-        point2 = points[i + 1]
-        clippedLine = cohenSutherlandClip(
-            point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
-        )
-        if clippedLine:
-            newPoints += [clippedLine[0], clippedLine[1]]
-            newPoints += [clippedLine[2], clippedLine[3]]
-    drawPolygon(*newPoints, fill=color, border="black", borderWidth=0.4)
-
 
 def redrawAll(app):
     blocks = app.world.getAllBlocks()
     if len(blocks) == 0:
         return
-    planes = getPlanesFromBlocks(blocks)
+    planes = getPlanesFromBlocks(app, blocks)
     sortPlanesToCamera(planes, app.camera.position)
     for plane in planes:
         drawPlane(plane, app, "green")
+    drawRect(WIDTH / 2, HEIGHT / 2, 10, 10, align="center")
 
 
 def onKeyHold(app, keys):
     if "down" in keys:
-        app.camera.changePositionX(app.camera.position[0] + 1)
+        app.camera.changePositionX(app.camera.position[0] + 0.4)
     if "up" in keys:
-        app.camera.changePositionX(app.camera.position[0] - 1)
+        app.camera.changePositionX(app.camera.position[0] - 0.4)
 
     if "right" in keys:
-        app.camera.changePositionY(app.camera.position[1] + 1)
+        app.camera.changePositionY(app.camera.position[1] + 0.4)
 
     if "left" in keys:
-        app.camera.changePositionY(app.camera.position[1] - 1)
+        app.camera.changePositionY(app.camera.position[1] - 0.4)
 
     if "," in keys:
-        app.camera.changePositionZ(app.camera.position[2] + 1)
+        app.camera.changePositionZ(app.camera.position[2] + 0.4)
 
     if "." in keys:
-        app.camera.changePositionZ(app.camera.position[2] - 1)
+        app.camera.changePositionZ(app.camera.position[2] - 0.4)
 
     if "w" in keys:
         x, y, z = app.camera.orientation
-        app.camera.changePositionX(app.camera.position[0] - 0.4 * math.cos(z))
+        app.camera.changePositionX(
+            app.camera.position[0] - 0.4 * math.cos(z) * math.sin(y)
+        )
         app.camera.changePositionY(app.camera.position[1] - 0.4 * math.sin(z))
         app.camera.changePositionZ(app.camera.position[2] - 0.4 * math.cos(y))
     if "s" in keys:
         x, y, z = app.camera.orientation
-        app.camera.changePositionX(app.camera.position[0] + 0.4 * math.cos(z))
+        app.camera.changePositionX(
+            app.camera.position[0] + 0.4 * math.cos(z) * math.sin(y)
+        )
         app.camera.changePositionY(app.camera.position[1] + 0.4 * math.sin(z))
         app.camera.changePositionZ(app.camera.position[2] + 0.4 * math.cos(y))
     if "a" in keys:
@@ -405,8 +469,6 @@ def onKeyHold(app, keys):
         )
         # app.camera.changePositionZ(app.camera.position[2] + 1/3 * math.cos(y))
 
-    pass
-
 
 def onMouseDrag(app, mouseX, mouseY):
     # if button == 2:
@@ -426,7 +488,7 @@ def onMouseRelease(app, mouseX, mouseY, button):
 
 
 def onStep(app):
-    pass
+    findSelectedBlockPosition(app)
 
 
 def main():
