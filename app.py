@@ -8,6 +8,7 @@
 
 from cmu_graphics import *
 import math
+import copy
 
 
 class Object:
@@ -130,27 +131,27 @@ class Block(Object):
             key=lambda x: getDistance(centerVerticy(x), position), reverse=True
         )
 
-    def draw(self, app, color):
-        index = 0
-        for plane in self.planes:
-            points = []
-            for point in plane:
-                p = getPositionOnScreen(app, point)
-                if p:
-                    x, y = p
-                    points += [(x, y)]
-            newPoints = []
-            for i in range(-1, len(points) - 1):
-                point1 = points[i]
-                point2 = points[i + 1]
-                clippedLine = cohenSutherlandClip(
-                    point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
-                )
-                if clippedLine:
-                    newPoints += [clippedLine[0], clippedLine[1]]
-                    newPoints += [clippedLine[2], clippedLine[3]]
-            drawPolygon(*newPoints, fill=color, border="black", borderWidth=0.4)
-            index += 1
+    # def draw(self, app, color):
+    #     index = 0
+    #     for plane in self.planes:
+    #         points = []
+    #         for point in plane:
+    #             p = getPositionOnScreen(app, point)
+    #             if p:
+    #                 x, y = p
+    #                 points += [(x, y)]
+    #         newPoints = []
+    #         for i in range(-1, len(points) - 1):
+    #             point1 = points[i]
+    #             point2 = points[i + 1]
+    #             clippedLine = cohenSutherlandClip(
+    #                 point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
+    #             )
+    #             if clippedLine:
+    #                 newPoints += [clippedLine[0], clippedLine[1]]
+    #                 newPoints += [clippedLine[2], clippedLine[3]]
+    #         drawPolygon(*newPoints, fill=color, border="black", borderWidth=0.4)
+    #         index += 1
 
     def getDistanceBy(self, point):
         return getDistance(self.position, point)
@@ -176,6 +177,15 @@ def compute_region_code(x, y, x_min, y_min, x_max, y_max):
     elif y > y_max:  # Above the rectangle
         code |= TOP
     return code
+
+
+def sortPlanesToCamera(planes, position):
+    def closestVerticy(plane):
+        a = copy.copy(plane)
+        a.sort(key=lambda x: getDistance(x, position), reverse=True)
+        return a[0]
+
+    planes.sort(key=lambda x: getDistance(closestVerticy(x), position), reverse=True)
 
 
 def cohenSutherlandClip(x1, y1, x2, y2, x_min, y_min, x_max, y_max):
@@ -241,26 +251,29 @@ def onAppStart(app):
     app.camera = Camera()
     app.dragStartingPosition = None
     app.world = World()
-    app.world.createBlock((0, 0, 0), "brown")
+
+    for i in range(-6, 7):
+        for j in range(-6, 7):
+            app.world.createBlock((i, j, 0), "green")
     app.world.createBlock((0, 0, 1), "brown")
     app.world.createBlock((0, 0, 2), "brown")
     app.world.createBlock((0, 0, 3), "brown")
     app.world.createBlock((0, 0, 4), "brown")
+    app.world.createBlock((0, 0, 5), "brown")
+    app.world.createBlock((0, 0, 6), "brown")
     for i in range(-2, 3):
         for j in range(-2, 3):
             for l in range(2):
-                app.world.createBlock((i, j, 2 + l), "brown")
+                app.world.createBlock((i, j, 3 + l), "brown")
     for i in range(-1, 2):
         for j in range(-1, 2):
-            app.world.createBlock((i, j, 4), "brown")
+            app.world.createBlock((i, j, 5), "brown")
 
-    app.world.createBlock((-1, 0, 5), "brown")
-    app.world.createBlock((1, 0, 5), "brown")
-    app.world.createBlock((0, -1, 5), "brown")
-    app.world.createBlock((0, 1, 5), "brown")
-    # for i in range(-4, 5):
-    #     for j in range(-4, 5):
-    #         app.world.createBlock((i, j, 0), "green")
+    app.world.createBlock((-1, 0, 6), "brown")
+    app.world.createBlock((1, 0, 6), "brown")
+    app.world.createBlock((0, -1, 6), "brown")
+    app.world.createBlock((0, 1, 6), "brown")
+
     pass
 
 
@@ -312,12 +325,57 @@ def getPositionOnScreen(app, pos):
 
 
 def getNearbyBlocks(app):
-    block = []
-    for bl in app.world.getAllBlocks():
-        if isBlockInView(bl.position, app.camera.position, app.camera.orientation):
-            block.append(bl)
+    blocks = []
+    for block in app.world.getAllBlocks():
+        if isBlockInView(block.position, app.camera.position, app.camera.orientation):
+            blocks.append(block)
+    return blocks
 
-    return block
+
+def getPlanesFromBlocks(blocks):
+    planes = dict()
+    for block in blocks:
+        for plane in block.planes:
+            planeStr = ""
+            i = 0
+            for v in plane:
+                if i == 0:
+                    planeStr += f"{v[0]},{v[1]},{v[2]}"
+                else:
+                    planeStr += f";{v[0]},{v[1]},{v[2]}"
+                i += 1
+            planes[planeStr] = planes.get(planeStr, 0)
+            planes[planeStr] += 1
+    planesArr = []
+    for planeStr in planes:
+        if planes[planeStr] == 1:
+            a = planeStr.split(";")
+            b = []
+            for aa in a:
+                x, y, z = aa.split(",")
+                b.append((int(x), int(y), int(z)))
+            planesArr.append(b)
+    return planesArr
+
+
+def drawPlane(plane, app, color):
+    points = []
+    for point in plane:
+        p = getPositionOnScreen(app, point)
+        if p:
+            x, y = p
+            points += [(x, y)]
+    newPoints = []
+    for i in range(-1, len(points) - 1):
+        point1 = points[i]
+        point2 = points[i + 1]
+        clippedLine = cohenSutherlandClip(
+            point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
+        )
+        if clippedLine:
+            newPoints += [clippedLine[0], clippedLine[1]]
+            newPoints += [clippedLine[2], clippedLine[3]]
+    drawPolygon(*newPoints, fill=color, border="black", borderWidth=0.4)
 
 
 def isBlockInView(position, cameraPosition, cameraOrientation):
@@ -355,7 +413,7 @@ def isBlockInView(position, cameraPosition, cameraOrientation):
     relative_angle = (relative_angle + math.pi) % (2 * math.pi) - math.pi
 
     # Check if the relative angle is within the field of view (π/4)
-    fov = math.pi / 4
+    fov = math.pi / 2
     return abs(relative_angle) <= fov
 
 
@@ -363,31 +421,34 @@ def redrawAll(app):
     blocks = getNearbyBlocks(app)
     if len(blocks) == 0:
         return
-    blocks.sort(key=lambda x: x.getDistanceBy(app.camera.position), reverse=True)
-    dist = blocks[0].getDistanceBy(app.camera.position)
-    for block in app.world.getAllBlocks():
-        d = block.getDistanceBy(app.camera.position)
-        if dist == 0:
-            color = rgb(0, 0, 0)
-        else:
-            num = math.floor(d / dist * 765)
-            if num >= 255:
-                r = 255
-                if num >= 255 * 2:
-                    g = 255
-                    b = (num - 255 * 2) % 256
-                else:
-                    g = num - 255
-                    b = 0
-            else:
-                r = num
-                g = 0
-                b = 0
+    planes = getPlanesFromBlocks(blocks)
+    sortPlanesToCamera(planes, app.camera.position)
+    for plane in planes:
+        drawPlane(plane, app, "green")
+    # dist = blocks[0].getDistanceBy(app.camera.position)
+    # for block in app.world.getAllBlocks():
+    #     d = block.getDistanceBy(app.camera.position)
+    #     if dist == 0:
+    #         color = rgb(0, 0, 0)
+    #     else:
+    #         num = math.floor(d / dist * 765)
+    #         if num >= 255:
+    #             r = 255
+    #             if num >= 255 * 2:
+    #                 g = 255
+    #                 b = (num - 255 * 2) % 256
+    #             else:
+    #                 g = num - 255
+    #                 b = 0
+    #         else:
+    #             r = num
+    #             g = 0
+    #             b = 0
 
-            color = rgb(r, g, b)
+    #         color = rgb(r, g, b)
 
-        block.sortPlanes(app.camera.position)
-        block.draw(app, "green")
+    #     block.sortPlanes(app.camera.position)
+    #     block.draw(app, "green")
 
 
 def onKeyHold(app, keys):
