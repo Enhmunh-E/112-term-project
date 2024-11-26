@@ -151,7 +151,6 @@ class Block(Object):
 #                                               #
 #################################################
 
-# https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
 # Define region codes
 INSIDE = 0  # 0000
 LEFT = 1  # 0001
