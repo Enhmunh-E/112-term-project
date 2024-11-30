@@ -24,6 +24,19 @@ from interactions import *
 WIDTH, HEIGHT = 800, 800
 MAXRES = max(WIDTH, HEIGHT)
 
+colors = [
+    "black",
+    "darkBlue",
+    "darkGreen",
+    "darkCyan",
+    "darkRed",
+    "indigo",
+    "goldenrod",
+    "lightGray",
+    "darkGray",
+    "blue",
+]
+
 
 def onAppStart(app):
     # app.setMaxShapeCount(100000)
@@ -32,20 +45,24 @@ def onAppStart(app):
     app.dragStartingPosition = None
     app.world = World()
     app.selectedBlockPosition = None
+    app.selectedBlockFace = None
 
     app.stepsPerSecond = 60
     app.start_time = time.perf_counter()
     app.frame_count = 0
     app.fps = 0
 
+    app.planesToShow = []
+    app.planePointsOnScreen = []
+
+    app.colors = colors
+    app.selectedColorIndex = 0
+
     for i in range(-7, 8):
         for j in range(-7, 8):
             app.world.createBlock((i, j, 0), "green")
     app.world.createBlock((0, 0, 1), "brown")
     app.world.createBlock((0, 0, 2), "brown")
-    app.world.createBlock((0, 0, 3), "brown")
-    app.world.createBlock((0, 0, 4), "brown")
-    app.world.createBlock((0, 0, 5), "brown")
     app.world.createBlock((0, 0, 6), "brown")
     for i in range(-2, 3):
         for j in range(-2, 3):
@@ -61,51 +78,46 @@ def onAppStart(app):
     app.world.createBlock((0, 1, 6), "brown")
 
 
-def drawPlane(plane, app, color):
-    points = []
-    for point in plane[0]:
-        p = getPositionOnScreen(app, point)
-        if p:
-            x, y = p
-            points += [(x, y)]
-    newPoints = []
-    for i in range(-1, len(points) - 1):
-        point1 = points[i]
-        point2 = points[i + 1]
-        clippedLine = cohenSutherlandClip(
-            point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
-        )
-        if clippedLine:
-            newPoints += [clippedLine[0], clippedLine[1]]
-            newPoints += [clippedLine[2], clippedLine[3]]
+def drawPlane(plane, selected, color):
     drawPolygon(
-        *newPoints,
+        *plane,
         fill=color,
-        border="red" if plane[1] == True else "black",
-        borderWidth=2 if plane[1] == True else 0.4,
+        border="red" if selected == True else "black",
+        borderWidth=2 if selected == True else 0.4,
     )
 
 
+def drawInventory(app):
+
+    startingX = (WIDTH - len(colors) * 24) / 2
+    startingY = HEIGHT - 24
+    for i in range(len(colors)):
+        drawRect(
+            startingX + i * 24,
+            startingY,
+            24,
+            24,
+            fill=colors[i],
+            border="white" if app.selectedColorIndex != i else "grey",
+        )
+
+
 def redrawAll(app):
-    blocks = app.world.getAllBlocks()
-
-    if len(blocks) == 0:
-        return
-
-    planes = getPlanesFromBlocks(app, blocks)
-
-    sortPlanesToCamera(planes, app.camera.position)
-
-    for plane in planes:
-        drawPlane(plane, app, "green")
+    for plane in app.planePointsOnScreen:
+        drawPlane(plane[0], plane[1], plane[2])
 
     # Draws center pointer
     drawRect(WIDTH / 2, HEIGHT / 2, 2, 8, align="center", fill="black")
     drawRect(WIDTH / 2, HEIGHT / 2, 8, 2, align="center", fill="black")
     drawLabel(f"{app.fps} FPS", 5, 5, fill="black", align="left-top")
 
+    drawInventory(app)
+
 
 def onStep(app):
+    updatePlanesToShow(app)
+    findSelectedBlockPosition(app)
+    updatePlanePointsOnScreen(app)
     app.frame_count += 1
     current_time = time.perf_counter()
     elapsed_time = current_time - app.start_time
@@ -116,9 +128,6 @@ def onStep(app):
         # Reset counters
         app.start_time = current_time
         app.frame_count = 0
-
-    findSelectedBlockPosition(app)
-    pass
 
 
 def main():

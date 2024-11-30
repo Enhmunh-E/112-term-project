@@ -9,6 +9,9 @@ import math
 from cmu_graphics import *
 import numpy as np
 
+WIDTH, HEIGHT = 800, 800
+MAXRES = max(WIDTH, HEIGHT)
+
 # Define region codes
 INSIDE = 0  # 0000
 LEFT = 1  # 0001
@@ -148,37 +151,6 @@ def getDirLengths(orientation):
     return X, Y, Z
 
 
-# Returns array of tuple (plane, selected)
-# def getPlanesFromBlocks(app, blocks):
-#     planes = dict()
-#     for block in blocks:
-#         for plane in block.planes:
-#             planeStr = ""
-#             i = 0
-#             for v in plane:
-#                 if i == 0:
-#                     planeStr += f"{v[0]},{v[1]},{v[2]}"
-#                 else:
-#                     planeStr += f";{v[0]},{v[1]},{v[2]}"
-#                 i += 1
-#             if planeStr not in planes:
-#                 planes[planeStr] = {
-#                     "count": 0,
-#                     "selected": block.position == app.selectedBlockPosition,
-#                 }
-#             planes[planeStr]["count"] += 1
-#     planesArr = []
-#     for planeStr in planes:
-#         if planes[planeStr]["count"] == 1:
-#             a = planeStr.split(";")
-#             b = []
-#             for aa in a:
-#                 x, y, z = aa.split(",")
-#                 b.append((float(x), float(y), float(z)))
-#             planesArr.append((b, planes[planeStr]["selected"]))
-#     return planesArr
-
-
 def getPlanesFromBlocks(app, blocks):
     planes = dict()
     for block in blocks:
@@ -189,6 +161,7 @@ def getPlanesFromBlocks(app, blocks):
                 planes[planeStr] = {
                     "count": 0,
                     "selected": block.position == app.selectedBlockPosition,
+                    "color": block.color,
                 }
             planes[planeStr]["count"] += 1
 
@@ -199,7 +172,7 @@ def getPlanesFromBlocks(app, blocks):
             vertices = [
                 tuple(map(float, vertex.split(","))) for vertex in planeStr.split(";")
             ]
-            planesArr.append((vertices, data["selected"]))
+            planesArr.append((vertices, data["selected"], data["color"]))
 
     return planesArr
 
@@ -222,3 +195,92 @@ def findSelectedBlockPosition(app):
             )
             return
     app.selectedBlockPosition = None
+
+
+def isPointInPolygon(polygon, test_point):
+    x, y = test_point
+    n = len(polygon)
+    inside = False
+
+    p1x, p1y = polygon[0]
+    for i in range(n + 1):
+        p2x, p2y = polygon[i % n]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+
+    return inside
+
+
+def getBlockPositionFromPlane(blocks, plane):
+    for block in blocks:
+        if plane in block.planes:
+            return block
+
+
+def findPlacingBlockPosition(blockPosition, blockFace):
+    if blockPosition == None:
+        return None
+    if blockFace == 0:
+        return (blockPosition[0], blockPosition[1], blockPosition[2] - 1)
+    if blockFace == 1:
+        return (blockPosition[0], blockPosition[1], blockPosition[2] + 1)
+    if blockFace == 2:
+        return (blockPosition[0], blockPosition[1] - 1, blockPosition[2])
+    if blockFace == 3:
+        return (blockPosition[0], blockPosition[1] + 1, blockPosition[2])
+    if blockFace == 4:
+        return (blockPosition[0] - 1, blockPosition[1], blockPosition[2])
+    if blockFace == 5:
+        return (blockPosition[0] + 1, blockPosition[1], blockPosition[2])
+
+
+def updatePlanesToShow(app):
+    blocks = app.world.getAllBlocks()
+
+    if len(blocks) == 0:
+        return
+
+    planes = getPlanesFromBlocks(app, blocks)
+
+    sortPlanesToCamera(planes, app.camera.position)
+
+    app.planesToShow = planes
+
+
+def updatePlanePointsOnScreen(app):
+    newPlanePointsOnScreen = []
+    for plane in app.planesToShow:
+        points = []
+        for point in plane[0]:
+            p = getPositionOnScreen(app, point)
+            if p:
+                x, y = p
+                points += [(x, y)]
+        newPoints = []
+        newPointsDifArr = []
+        for i in range(-1, len(points) - 1):
+            point1 = points[i]
+            point2 = points[i + 1]
+            clippedLine = cohenSutherlandClip(
+                point1[0], point1[1], point2[0], point2[1], 0, 0, WIDTH, HEIGHT
+            )
+            if clippedLine:
+                newPoints += [clippedLine[0], clippedLine[1]]
+                newPoints += [clippedLine[2], clippedLine[3]]
+                newPointsDifArr.append([clippedLine[0], clippedLine[1]])
+                newPointsDifArr.append([clippedLine[2], clippedLine[3]])
+        if len(newPoints) > 0:
+            if plane[1] == True:
+                if isPointInPolygon(newPointsDifArr, [WIDTH / 2, HEIGHT / 2]):
+                    block = getBlockPositionFromPlane(
+                        app.world.getAllBlocks(), plane[0]
+                    )
+                    app.selectedBlockFace = block.planes.index(plane[0])
+            newPlanePointsOnScreen.append((newPoints, plane[1], plane[2]))
+    app.planePointsOnScreen = newPlanePointsOnScreen

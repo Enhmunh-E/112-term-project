@@ -5,7 +5,6 @@
 #################################################
 
 
-import copy
 import math
 from cmu_graphics import *
 from utils import *
@@ -75,3 +74,16 @@ def onMousePress(app, mouseX, mouseY, label):
     if label == 2:
         if app.selectedBlockPosition:
             app.world.deleteBlock(app.selectedBlockPosition)
+
+
+def onKeyPress(app, key):
+    if key == "f":
+        position = findPlacingBlockPosition(
+            app.selectedBlockPosition, app.selectedBlockFace
+        )
+        if position:
+            if position not in app.world.blocks:
+                app.world.createBlock(position, app.colors[app.selectedColorIndex])
+    if key in "0123456789":
+        keyNum = int(key)
+        app.selectedColorIndex = keyNum - 1

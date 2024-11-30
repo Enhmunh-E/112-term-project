@@ -119,7 +119,8 @@ class Block(Object):
                 self.vertices[5],
             ],  # Right face
         ]
-        self.colors = [color] * 6
+        # self.colors = [color] * 6
+        self.color = color if color else "green"
 
     def __str__(self):
         return f"Block: {self.vertices}"
