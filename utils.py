@@ -6,11 +6,28 @@
 
 import copy
 import math
+import json
+import datetime
+import os
+
 from cmu_graphics import *
-import numpy as np
 
 WIDTH, HEIGHT = 800, 800
 MAXRES = max(WIDTH, HEIGHT)
+
+colors = [
+    "black",
+    "darkBlue",
+    "darkGreen",
+    "darkCyan",
+    "darkRed",
+    "indigo",
+    "goldenrod",
+    "lightGray",
+    "darkGray",
+    "blue",
+]
+
 
 # Define region codes
 INSIDE = 0  # 0000
@@ -101,17 +118,11 @@ def getPositionOnScreen(app, pos):
     Cpx, Cpy, Cpz = app.camera.position
 
     # Differences between point and camera position
-    difX = x - Cpx
-    difY = y - Cpy
-    difZ = z - Cpz
+    difX, difY, difZ = x - Cpx, y - Cpy, z - Cpz
 
     # Sine and cosine of orientation angles
-    SinX = math.sin(COx)
-    SinY = math.sin(COy)
-    SinZ = math.sin(COz)
-    CosX = math.cos(COx)
-    CosY = math.cos(COy)
-    CosZ = math.cos(COz)
+    SinX, SinY, SinZ = math.sin(COx), math.sin(COy), math.sin(COz)
+    CosX, CosY, CosZ = math.cos(COx), math.cos(COy), math.cos(COz)
 
     # Transform world coordinates into camera space (verify correctness)
     X = CosY * (SinZ * difY + CosZ * difX) - SinY * difZ
@@ -123,24 +134,18 @@ def getPositionOnScreen(app, pos):
     )
 
     # Discard points behind the camera or outside clipping planes
-    near_plane = 0.1
-    far_plane = 1000
+    near_plane, far_plane = 0.1, 1000
     if Z >= 0 or Z < -far_plane or Z > -near_plane:
         return None
 
     # Perspective divide and aspect ratio adjustment
-    py = Y / -Z
-    px = X / -Z
+    py, px = Y / -Z, X / -Z
     aspect_ratio = app.WIDTH / app.HEIGHT
     px /= aspect_ratio
 
     # Map to screen space
-    py_map = (1 + py) / 2
-    px_map = (1 + px) / 2
-
-    posOnScreenY = int(py_map * app.HEIGHT)
-    posOnScreenX = int(px_map * app.WIDTH)
-
+    py_map, px_map = (1 + py) / 2, (1 + px) / 2
+    posOnScreenY, posOnScreenX = int(py_map * app.HEIGHT), int(px_map * app.WIDTH)
     return posOnScreenY, posOnScreenX
 
 
@@ -162,6 +167,7 @@ def getPlanesFromBlocks(app, blocks):
                     "count": 0,
                     "selected": block.position == app.selectedBlockPosition,
                     "color": block.color,
+                    "blockPosition": block.position,
                 }
             planes[planeStr]["count"] += 1
 
@@ -172,29 +178,43 @@ def getPlanesFromBlocks(app, blocks):
             vertices = [
                 tuple(map(float, vertex.split(","))) for vertex in planeStr.split(";")
             ]
-            planesArr.append((vertices, data["selected"], data["color"]))
+            planesArr.append(
+                (vertices, data["selected"], data["color"], data["blockPosition"])
+            )
 
     return planesArr
 
 
 def findSelectedBlockPosition(app):
-    camX, camY, camZ = copy.copy(app.camera.position)
-    stepX, stepY, stepZ = getDirLengths(app.camera.orientation)
-    for i in range(0, 100):
-        X = camX - stepX / 10 * i
-        Y = camY - stepY / 10 * i
-        Z = camZ - stepZ / 10 * i
-        if (
-            f"{rounded(X)},{rounded(Y)},{rounded(Z)}"
-            in app.world.blockPositionsStringSet
-        ):
-            app.selectedBlockPosition = (
-                rounded(X),
-                rounded(Y),
-                rounded(Z),
-            )
+    camX, camY, camZ = app.camera.position
+    if (
+        f"{rounded(camX)},{rounded(camY)},{rounded(camZ)}"
+        in app.world.blockPositionsStringSet
+    ):
+        app.selectedBlockPosition = None
+        return
+    for plane in app.planePointsOnScreen[::-1]:
+        if isPointInPolygon(arrayToArrayOfTuples(plane[0]), [WIDTH / 2, HEIGHT / 2]):
+            app.selectedBlockPosition = plane[3]
             return
     app.selectedBlockPosition = None
+    # camX, camY, camZ = copy.copy(app.camera.position)
+    # stepX, stepY, stepZ = getDirLengths(app.camera.orientation)
+    # for i in range(0, 100):
+    #     X = camX - stepX / 10 * i
+    #     Y = camY - stepY / 10 * i
+    #     Z = camZ - stepZ / 10 * i
+    #     if (
+    #         f"{rounded(X)},{rounded(Y)},{rounded(Z)}"
+    #         in app.world.blockPositionsStringSet
+    #     ):
+    #         app.selectedBlockPosition = (
+    #             rounded(X),
+    #             rounded(Y),
+    #             rounded(Z),
+    #         )
+    #         return
+    # app.selectedBlockPosition = None
 
 
 def isPointInPolygon(polygon, test_point):
@@ -242,15 +262,15 @@ def findPlacingBlockPosition(blockPosition, blockFace):
 
 def updatePlanesToShow(app):
     blocks = app.world.getAllBlocks()
-
     if len(blocks) == 0:
         return
-
     planes = getPlanesFromBlocks(app, blocks)
-
     sortPlanesToCamera(planes, app.camera.position)
-
     app.planesToShow = planes
+
+
+def arrayToArrayOfTuples(L):
+    return [(L[i], L[i + 1]) for i in range(0, len(L), 2)]
 
 
 def updatePlanePointsOnScreen(app):
@@ -282,5 +302,98 @@ def updatePlanePointsOnScreen(app):
                         app.world.getAllBlocks(), plane[0]
                     )
                     app.selectedBlockFace = block.planes.index(plane[0])
-            newPlanePointsOnScreen.append((newPoints, plane[1], plane[2]))
+            newPlanePointsOnScreen.append((newPoints, plane[1], plane[2], plane[3]))
     app.planePointsOnScreen = newPlanePointsOnScreen
+
+
+baseWorldFile = {
+    "name": "World 1",
+    "cameraPosition": [0, 0, 0],
+    "cameraOrientation": [0, 1.5707963267948966, 0],
+    "world": [[[0, 0, 0], "brown"]],
+}
+
+
+def createWorld(app):
+    worldFile = copy.copy(baseWorldFile)
+    worldName = "World " + str(len(app.worlds) + 1)
+    worldFile["name"] = worldName
+    newWorlds = copy.copy(app.worlds)
+    newWorlds.append(
+        {"name": worldName, "updatedAt": datetime.datetime.now().__str__()}
+    )
+    with open("./worlds/" + worldName + ".json", "w") as outfile:
+        json.dump(worldFile, outfile)
+    with open("main.json", "w") as outfile:
+        json.dump(newWorlds, outfile)
+    app.worlds = newWorlds
+
+
+def loadWorld(app, world):
+    with open("./worlds/" + world + ".json", "r") as file:
+        worldFile = json.load(file)
+        position = worldFile["cameraPosition"]
+        orientation = worldFile["cameraOrientation"]
+        world = worldFile["world"]
+        app.camera.changePosition(*position)
+        app.camera.changeOrientationFully(*orientation)
+        for position, color in world:
+            app.world.createBlock((position[0], position[1], position[2]), color),
+
+
+def deleteWorld(worldName):
+    with open("main.json", "r") as openfile:
+        json_object = json.load(openfile)
+        newWorlds = []
+        for world in json_object:
+            if world["name"] != worldName:
+                newWorlds.append(world)
+    with open("main.json", "w") as outfile:
+        json.dump(newWorlds, outfile)
+    if os.path.exists("./worlds/" + worldName + ".json"):
+        os.remove("./worlds/" + worldName + ".json")
+    app.worlds = newWorlds
+
+
+def saveWorld(app):
+    worldDict = {
+        "name": app.worlds[app.selectedWorld]["name"],
+        "cameraPosition": [
+            app.camera.position[0],
+            app.camera.position[1],
+            app.camera.position[2],
+        ],
+        "cameraOrientation": [
+            app.camera.orientation[0],
+            app.camera.orientation[1],
+            app.camera.orientation[2],
+        ],
+        # "world": [[[0, 0, 0], "brown"]],
+        "world": [
+            [[block.position[0], block.position[1], block.position[2]], block.color]
+            for block in app.world.getAllBlocks()
+        ],
+    }
+    # json_object = json.dumps(worldDict, indent=4)
+
+    with open(
+        "./worlds/" + app.worlds[app.selectedWorld]["name"] + ".json", "w"
+    ) as outfile:
+        json.dump(worldDict, outfile)
+        # outfile.write(json_object)
+    with open("main.json", "r") as openfile:
+        json_object = json.load(openfile)
+        for world in json_object:
+            if world["name"] == app.worlds[app.selectedWorld]["name"]:
+                world["updatedAt"] = datetime.datetime.now().__str__()
+    with open("main.json", "w") as outfile:
+        json.dump(json_object, outfile)
+
+
+def checkMouseHoveringButton(
+    mouseX, mouseY, buttonX, buttonY, buttonWidth, buttonHeight
+):
+    if buttonX - buttonWidth / 2 < mouseX < buttonX + buttonWidth / 2:
+        if buttonY - buttonHeight / 2 < mouseY < buttonY + buttonHeight / 2:
+            return True
+    return False

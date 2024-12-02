@@ -5,7 +5,6 @@
 #################################################
 
 from utils import *
-import math
 
 
 class Object:
@@ -37,6 +36,13 @@ class Object:
             self.orientation[0] + x,
             newY,
             self.orientation[2] + z,
+        )
+
+    def changeOrientationFully(self, x, y, z):
+        self.orientation = (
+            x,
+            y,
+            z,
         )
 
 
