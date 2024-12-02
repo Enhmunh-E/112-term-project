@@ -47,6 +47,8 @@ def onAppStart(app):
     app.mouseX = 0
     app.mouseY = 0
     app.selectedWorld = 0
+    app.deleteSound = Sound("./assets/break.mp3")
+    app.placeSound = Sound("./assets/place.mp3")
 
     # for i in range(-7, 8):
     #     for j in range(-7, 8):
@@ -234,7 +236,6 @@ def menu_onMousePress(app, mouseX, mouseY, label):
 
 def main():
     runAppWithScreens(initialScreen="start", width=WIDTH, height=HEIGHT)
-    runApp(WIDTH, HEIGHT)
 
 
 main()

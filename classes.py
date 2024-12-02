@@ -63,6 +63,7 @@ class World:
         )
 
     def deleteBlock(self, position):
+        app.deleteSound.play(restart=True)
         if f"{position[0]},{position[1]},{position[2]}" in self.blockPositionsStringSet:
             self.blockPositionsStringSet.remove(
                 f"{position[0]},{position[1]},{position[2]}"

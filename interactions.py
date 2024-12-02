@@ -80,10 +80,8 @@ def game_onKeyPress(app, key):
                 f"{position[0]},{position[1]},{position[2]}"
                 not in app.world.blockPositionsStringSet
             ):
+                app.placeSound.play(restart=True)
                 app.world.createBlock(position, app.colors[app.selectedColorIndex])
-                app.world.blockPositionsStringSet.append(
-                    f"{position[0]},{position[1]},{position[2]}"
-                )
     if key in "0123456789":
         keyNum = int(key)
         if key == "0":
