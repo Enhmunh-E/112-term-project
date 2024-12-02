@@ -127,7 +127,7 @@ def game_onStep(app):
 
 def start_redrawAll(app):
     drawImage("./assets/main.png", 0, 0)
-    drawButton(app, "Play", 175, 55, WIDTH / 2, 500)
+    drawButton(app, "Play", 175, 55, WIDTH / 2, 550)
 
 
 def drawButton(app, label, width, height, x, y, size=32):
