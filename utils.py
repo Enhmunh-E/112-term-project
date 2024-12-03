@@ -15,6 +15,7 @@ from cmu_graphics import *
 WIDTH, HEIGHT = 800, 800
 MAXRES = max(WIDTH, HEIGHT)
 
+# Color of the blocks
 colors = [
     "black",
     "darkBlue",
@@ -29,6 +30,10 @@ colors = [
 ]
 
 
+# Following variables and function clips a line on a screen so that it draws
+# efficiently on 2d plane. It is called Cohen Sutherland Clip | Line clipping
+# https://www.google.com/search?q=cohensutherland+clip&sourceid=chrome&ie=UTF-8
+
 # Define region codes
 INSIDE = 0  # 0000
 LEFT = 1  # 0001
@@ -37,32 +42,23 @@ BOTTOM = 4  # 0100
 TOP = 8  # 1000
 
 
-def compute_region_code(x, y, x_min, y_min, x_max, y_max):
+def computeRegionCode(x, y, xMin, yMin, xMax, yMax):
     code = INSIDE
-    if x < x_min:  # To the left of the rectangle
+    if x < xMin:  # To the left of the rectangle
         code |= LEFT
-    elif x > x_max:  # To the right of the rectangle
+    elif x > xMax:  # To the right of the rectangle
         code |= RIGHT
-    if y < y_min:  # Below the rectangle
+    if y < yMin:  # Below the rectangle
         code |= BOTTOM
-    elif y > y_max:  # Above the rectangle
+    elif y > yMax:  # Above the rectangle
         code |= TOP
     return code
 
 
-def sortPlanesToCamera(planes, position):
-    def closestVerticy(plane):
-        a = copy.copy(plane[0])
-        a.sort(key=lambda x: getDistance(x, position), reverse=True)
-        return a[0]
-
-    planes.sort(key=lambda x: getDistance(closestVerticy(x), position), reverse=True)
-
-
-def cohenSutherlandClip(x1, y1, x2, y2, x_min, y_min, x_max, y_max):
+def cohenSutherlandClip(x1, y1, x2, y2, xMin, yMin, xMax, yMax):
     # Compute region codes for both endpoints
-    code1 = compute_region_code(x1, y1, x_min, y_min, x_max, y_max)
-    code2 = compute_region_code(x2, y2, x_min, y_min, x_max, y_max)
+    code1 = computeRegionCode(x1, y1, xMin, yMin, xMax, yMax)
+    code2 = computeRegionCode(x2, y2, xMin, yMin, xMax, yMax)
     accept = False
 
     while True:
@@ -76,29 +72,29 @@ def cohenSutherlandClip(x1, y1, x2, y2, x_min, y_min, x_max, y_max):
         else:
             # The line is partially inside; clip it
             # Choose an endpoint outside the clipping rectangle
-            code_out = code1 if code1 != 0 else code2
+            codeOut = code1 if code1 != 0 else code2
 
             # Find intersection point based on region code
-            if code_out & TOP:  # Point is above the rectangle
-                x = x1 + (x2 - x1) * (y_max - y1) / (y2 - y1)
-                y = y_max
-            elif code_out & BOTTOM:  # Point is below the rectangle
-                x = x1 + (x2 - x1) * (y_min - y1) / (y2 - y1)
-                y = y_min
-            elif code_out & RIGHT:  # Point is to the right of the rectangle
-                y = y1 + (y2 - y1) * (x_max - x1) / (x2 - x1)
-                x = x_max
-            elif code_out & LEFT:  # Point is to the left of the rectangle
-                y = y1 + (y2 - y1) * (x_min - x1) / (x2 - x1)
-                x = x_min
+            if codeOut & TOP:  # Point is above the rectangle
+                x = x1 + (x2 - x1) * (yMax - y1) / (y2 - y1)
+                y = yMax
+            elif codeOut & BOTTOM:  # Point is below the rectangle
+                x = x1 + (x2 - x1) * (yMin - y1) / (y2 - y1)
+                y = yMin
+            elif codeOut & RIGHT:  # Point is to the right of the rectangle
+                y = y1 + (y2 - y1) * (xMax - x1) / (x2 - x1)
+                x = xMax
+            elif codeOut & LEFT:  # Point is to the left of the rectangle
+                y = y1 + (y2 - y1) * (xMin - x1) / (x2 - x1)
+                x = xMin
 
             # Replace endpoint outside the rectangle with intersection point
-            if code_out == code1:
+            if codeOut == code1:
                 x1, y1 = x, y
-                code1 = compute_region_code(x1, y1, x_min, y_min, x_max, y_max)
+                code1 = computeRegionCode(x1, y1, xMin, yMin, xMax, yMax)
             else:
                 x2, y2 = x, y
-                code2 = compute_region_code(x2, y2, x_min, y_min, x_max, y_max)
+                code2 = computeRegionCode(x2, y2, xMin, yMin, xMax, yMax)
 
     if accept:
         return rounded(x1), rounded(y1), rounded(x2), rounded(y2)
@@ -106,12 +102,14 @@ def cohenSutherlandClip(x1, y1, x2, y2, x_min, y_min, x_max, y_max):
         return None
 
 
+# Finds distance between 2 points
 def getDistance(point1, point2):
     x1, y1, z1 = point1
     x2, y2, z2 = point2
     return ((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2) ** (1 / 2)
 
 
+# Given a 3d point, it finds a projection of the point on screen
 def getPositionOnScreen(app, pos):
     x, y, z = pos
     COx, COy, COz = app.camera.orientation
@@ -134,21 +132,23 @@ def getPositionOnScreen(app, pos):
     )
 
     # Discard points behind the camera or outside clipping planes
-    near_plane, far_plane = 0.1, 30
-    if Z >= 0 or Z < -far_plane or Z > -near_plane:
+    nearPlane, farPlane = 0.1, 30
+    if Z >= 0 or Z < -farPlane or Z > -nearPlane:
         return None
 
     # Perspective divide and aspect ratio adjustment
     py, px = Y / -Z, X / -Z
-    aspect_ratio = app.WIDTH / app.HEIGHT
-    px /= aspect_ratio
+    aspectRatio = app.WIDTH / app.HEIGHT
+    px /= aspectRatio
 
     # Map to screen space
-    py_map, px_map = (1 + py) / 2, (1 + px) / 2
-    posOnScreenY, posOnScreenX = int(py_map * app.HEIGHT), int(px_map * app.WIDTH)
+    pyMap, pxMap = (1 + py) / 2, (1 + px) / 2
+    posOnScreenY, posOnScreenX = int(pyMap * app.HEIGHT), int(pxMap * app.WIDTH)
     return posOnScreenY, posOnScreenX
 
 
+# Gets the stepX, Y, Z from the orientation so that we can use it to
+# change user position
 def getDirLengths(orientation):
     Y = math.sin(orientation[2]) * math.cos(math.pi / 2 - orientation[1])
     X = math.cos(orientation[2]) * math.cos(math.pi / 2 - orientation[1])
@@ -156,6 +156,8 @@ def getDirLengths(orientation):
     return X, Y, Z
 
 
+# Returns all the planes that we will draw on a screen from the blocks
+# This is made efficient so that we reduces the planes that we are not seeing
 def getPlanesFromBlocks(app, blocks):
     planes = dict()
     for block in blocks:
@@ -185,6 +187,7 @@ def getPlanesFromBlocks(app, blocks):
     return planesArr
 
 
+# Finds the block position of the plane where the user is seeing
 def findSelectedBlockPosition(app):
     camX, camY, camZ = app.camera.position
     if (
@@ -198,27 +201,12 @@ def findSelectedBlockPosition(app):
             app.selectedBlockPosition = plane[3]
             return
     app.selectedBlockPosition = None
-    # camX, camY, camZ = copy.copy(app.camera.position)
-    # stepX, stepY, stepZ = getDirLengths(app.camera.orientation)
-    # for i in range(0, 100):
-    #     X = camX - stepX / 10 * i
-    #     Y = camY - stepY / 10 * i
-    #     Z = camZ - stepZ / 10 * i
-    #     if (
-    #         f"{rounded(X)},{rounded(Y)},{rounded(Z)}"
-    #         in app.world.blockPositionsStringSet
-    #     ):
-    #         app.selectedBlockPosition = (
-    #             rounded(X),
-    #             rounded(Y),
-    #             rounded(Z),
-    #         )
-    #         return
-    # app.selectedBlockPosition = None
 
 
-def isPointInPolygon(polygon, test_point):
-    x, y = test_point
+# Checks if the point on screen is in the polygon on screen
+# We use this function to find the block that the user is seeing
+def isPointInPolygon(polygon, testPoint):
+    x, y = testPoint
     n = len(polygon)
     inside = False
 
@@ -237,12 +225,14 @@ def isPointInPolygon(polygon, test_point):
     return inside
 
 
+# Given a plane, gets the block position
 def getBlockPositionFromPlane(blocks, plane):
     for block in blocks:
         if plane in block.planes:
             return block
 
 
+# Finds a position where we are gonna place a block given the face of the block
 def findPlacingBlockPosition(blockPosition, blockFace):
     if blockPosition == None:
         return None
@@ -260,6 +250,18 @@ def findPlacingBlockPosition(blockPosition, blockFace):
         return (blockPosition[0] + 1, blockPosition[1], blockPosition[2])
 
 
+# Sorts the plane position to the camera
+def sortPlanesToCamera(planes, position):
+    def closestVerticy(plane):
+        a = copy.copy(plane[0])
+        a.sort(key=lambda x: getDistance(x, position), reverse=True)
+        return a[0]
+
+    planes.sort(key=lambda x: getDistance(closestVerticy(x), position), reverse=True)
+
+
+# Following function updates the planes to show on screen, according to the
+# user position and other functions such as getPlaneFromBlocks.
 def updatePlanesToShow(app):
     blocks = app.world.getAllBlocks()
     if len(blocks) == 0:
@@ -267,16 +269,21 @@ def updatePlanesToShow(app):
     planes = getPlanesFromBlocks(app, blocks)
     sortPlanesToCamera(planes, app.camera.position)
     app.planesToShow = planes
+    updatePlanePointsOnScreen(app)
 
 
+# The following function turn array into array of tuples
 def arrayToArrayOfTuples(L):
     return [(L[i], L[i + 1]) for i in range(0, len(L), 2)]
 
 
+# Following function gets all the planes that are projected on a 2d screen
+# using clipping methods and functinos such as cohenSutherlandClip.
 def updatePlanePointsOnScreen(app):
     newPlanePointsOnScreen = []
     for plane in app.planesToShow:
         points = []
+        # Gets all the position of a plane on screen
         for point in plane[0]:
             p = getPositionOnScreen(app, point)
             if p:
@@ -284,6 +291,7 @@ def updatePlanePointsOnScreen(app):
                 points += [(x, y)]
         newPoints = []
         newPointsDifArr = []
+        # Goes through all the points and clips the line according to the view
         for i in range(-1, len(points) - 1):
             point1 = points[i]
             point2 = points[i + 1]
@@ -295,6 +303,8 @@ def updatePlanePointsOnScreen(app):
                 newPoints += [clippedLine[2], clippedLine[3]]
                 newPointsDifArr.append([clippedLine[0], clippedLine[1]])
                 newPointsDifArr.append([clippedLine[2], clippedLine[3]])
+        # After getting all the new points on screen if the block is visible it
+        # adds the the planepoints on screen so that we can draw it
         if len(newPoints) > 0:
             if plane[1] == True:
                 if isPointInPolygon(newPointsDifArr, [WIDTH / 2, HEIGHT / 2]):
@@ -316,6 +326,7 @@ baseWorldFile = {
 }
 
 
+# Creates a base world file and saves it to the main.json and worlds folder
 def createWorld(app):
     worldFile = copy.copy(baseWorldFile)
     worldName = "World " + str(len(app.worlds) + 1)
@@ -331,6 +342,7 @@ def createWorld(app):
     app.worlds = newWorlds
 
 
+# Loads a selected world
 def loadWorld(app, world):
     with open("./worlds/" + world + ".json", "r") as file:
         worldFile = json.load(file)
@@ -343,6 +355,7 @@ def loadWorld(app, world):
             app.world.createBlock((position[0], position[1], position[2]), color),
 
 
+# Deletes a world
 def deleteWorld(worldName):
     with open("main.json", "r") as openfile:
         json_object = json.load(openfile)
@@ -359,6 +372,7 @@ def deleteWorld(worldName):
         app.selectedWorld -= 1
 
 
+# Saves a world by saving user position and orientation with blocks
 def saveWorld(app):
     worldDict = {
         "name": app.worlds[app.selectedWorld]["name"],
@@ -372,13 +386,11 @@ def saveWorld(app):
             app.camera.orientation[1],
             app.camera.orientation[2],
         ],
-        # "world": [[[0, 0, 0], "brown"]],
         "world": [
             [[block.position[0], block.position[1], block.position[2]], block.color]
             for block in app.world.getAllBlocks()
         ],
     }
-    # json_object = json.dumps(worldDict, indent=4)
 
     with open(
         "./worlds/" + app.worlds[app.selectedWorld]["name"] + ".json", "w"
@@ -394,6 +406,7 @@ def saveWorld(app):
         json.dump(json_object, outfile)
 
 
+# Checks if the mouse position is on the button
 def checkMouseHoveringButton(
     mouseX, mouseY, buttonX, buttonY, buttonWidth, buttonHeight
 ):

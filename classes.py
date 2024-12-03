@@ -7,6 +7,8 @@
 from utils import *
 
 
+# Object is a class that every block or entity should have as it gives
+# basic functions that the entities need
 class Object:
     def __init__(self, position=(0, 0, 0), vertices=[], orientation=(0, 0, 0)):
         self.position = position
@@ -46,10 +48,13 @@ class Object:
         )
 
 
+# Camera is also Object
 class Camera(Object):
     pass
 
 
+# World class contains all the necessary informations needed to show the world
+# such as block positions
 class World:
     def __init__(self):
         self.blocks = []
@@ -74,6 +79,8 @@ class World:
         return self.blocks
 
 
+# Block class is a class that contains informations that we need to show a block
+# We need it's vertices and planes to illustrate the block
 class Block(Object):
     def __init__(self, position=(0, 0, 0), color=None):
         self.position = position
@@ -132,13 +139,15 @@ class Block(Object):
     def __str__(self):
         return f"Block: {self.vertices}"
 
+    # We need this to know which plane we should print first and last
+    # So that it is logically correct
     def sortPlanes(self, position):
         def centerVerticy(plane):
             a = [0, 0, 0]
             for x, y, z in plane:
                 a[0] += x
                 a[1] += y
-                a[2] += y
+                a[2] += z
             a[0] /= len(plane)
             a[1] /= len(plane)
             a[2] /= len(plane)
@@ -148,5 +157,6 @@ class Block(Object):
             key=lambda x: getDistance(centerVerticy(x), position), reverse=True
         )
 
+    # Finds distance in relation to the position
     def getDistanceBy(self, point):
         return getDistance(self.position, point)
