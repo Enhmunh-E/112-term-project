@@ -1,22 +1,21 @@
 # Project Name: PixelBuild
 
-PixelBuild is a unique game concept that combines the block-building mechanics of Minecraft with the competitive gunplay style of Valorant. This hybrid gameplay creates an immersive experience where players can engage in both world-building and strategic combat.
+PixelBuild is a unique game concept that focuses on the creative and calming aspects of block-building. Inspired by the mechanics of Minecraft, this game provides an immersive experience where players can engage in world-building.
 
 ## What does the game do:
 
 PixelBuild is a voxel-based game that allows players to interact with a dynamic 3D world. Players can:
 
 - Place, delete, or modify blocks to shape their environment.
-- Engage in combat using a variety of weapons, blending creativity with competitive gameplay.
+- Focus on creative expression and relaxation through building.
 
-This combination of sandbox-style building and tactical gunplay makes PixelBuild a versatile and engaging experience for players who enjoy both genres.
+This emphasis on sandbox-style building without combat elements makes PixelBuild a versatile and engaging experience for players who enjoy creativity and exploration.
 
 ## Competitive Analysis:
 
-There is a mobile game called PixelGun where it combines guns with blocks, the same principle for my game. However, on PixelGun it does not allow users to modify the game world in game, not giving immersive experience. There are also valorant mods in Minecraft where Valorant is implemented in them as an addition.
-Also, if it wasn't a block game, then it would be similar to Fortnite.
+While there are other block-building games like Minecraft, PixelBuild distinguishes itself by focusing solely on the creative and calming aspects of gameplay. PixelBuild provides a peaceful environment for players to express their creativity.
 
-The main component that my game is different than the following games is that, it will have blocks in which are breakable also, you can't put any blokcs in game. By adding guns, it will provide more creative gameplay and thus be more favorable to the people.
+The main component that sets PixelBuild apart from similar games is its focus on breakable blocks and the ability to modify the environment freely. By removing combat elements, it provides a more creative gameplay experience that appeals to players seeking relaxation.
 
 ## Structural Plan:
 
@@ -49,6 +48,10 @@ To ensure efficient coding and backup:
     cmu_graphics
     copy
     math
+    time
+    json
+    datetime
+    os
 
 ## Algorithms Used:
 
@@ -57,6 +60,18 @@ To ensure efficient coding and backup:
 - [Perspective Projection](https://en.wikipedia.org/wiki/3D_projection) for rendering on screen
 
 - [Painter's Algorithm](https://en.wikipedia.org/wiki/Painter%27s_algorithm#:~:text=Similarly%2C%20the%20painter's%20algorithm%20sorts,this%20order%2C%20farthest%20to%20closest.) for rendering order
+
+### TP 1 Update:
+
+Created a basic graphics library which works but has plenty of bugs and non efficient.
+
+### TP 2 Update:
+
+Fixed bugs for 3d graphics and made the code more efficient by reducing the faces to draw.
+
+### TP 3 Update:
+
+I have implemented world saving, menu, start screens for a proper gameplay
 
 ## Pictures
 
@@ -67,3 +82,61 @@ To ensure efficient coding and backup:
 ### Version Control
 
 ![tp2](./assets/versionControl.png)
+
+## How to Run the project
+
+1. Clone the game from github.
+2. Run the app.py file.
+   (As I have updated the cmu_graphics for mouse label in screens, I have uploaded the cmu_graphics. Which means that the project won't work with normal cmu_graphics)
+
+## How to Play
+
+### Movement Controls
+
+#### Directional Movement: Use the arrow keys and , or . to move your position in the 3D space:
+
+    Up Arrow: Move forward along the X-axis.
+    Down Arrow: Move backward along the X-axis.
+    Right Arrow: Move right along the Y-axis.
+    Left Arrow: Move left along the Y-axis.
+    Comma (,): Move up along the Z-axis.
+    Period (.): Move down along the Z-axis.
+
+#### View-Based Movement: Use W, A, S, D for movement relative to where you are looking:
+
+    W: Move forward in the direction you are facing.
+
+    S: Move backward in the direction you are facing.
+
+    A: Strafe left (move sideways) relative to your view direction.
+
+    D: Strafe right (move sideways) relative to your view direction.
+
+### Orientation Control
+
+#### Mouse Dragging: Click and drag the mouse to rotate your view:
+
+    Dragging horizontally adjusts your view horizontally.
+
+    Dragging vertically adjusts your view vertically.
+
+### Block Interaction
+
+#### Placing Blocks:
+
+    Press F to place a block at a highlighted position in your view. Ensure there is no existing block at that position.
+
+#### Deleting Blocks:
+
+    Right-click (label 2) to delete a block at a selected position. Note that you cannot delete the last remaining block in the world.
+    Block Selection
+
+#### Change Block Type:
+
+    Press number keys (0 to 9) to select different block types/colors. The number corresponds to different colors or types, with 0 selecting the tenth option.
+
+### Exiting and Saving
+
+#### Exit Game:
+
+    Press Escape to save your current world state and return to the main menu. This action also plays a sound cue indicating the action.
