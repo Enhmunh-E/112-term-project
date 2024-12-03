@@ -308,7 +308,7 @@ def updatePlanePointsOnScreen(app):
 
 baseWorldFile = {
     "name": "World 1",
-    "cameraPosition": [0, 0, 0],
+    "cameraPosition": [2, 0, 0],
     "cameraOrientation": [0, 1.5707963267948966, 0],
     "world": [[[0, 0, 0], "brown"]],
 }
@@ -353,6 +353,8 @@ def deleteWorld(worldName):
     if os.path.exists("./worlds/" + worldName + ".json"):
         os.remove("./worlds/" + worldName + ".json")
     app.worlds = newWorlds
+    if app.selectedWorld >= len(app.worlds) and app.selectedWorld > 0:
+        app.selectedWorld -= 1
 
 
 def saveWorld(app):

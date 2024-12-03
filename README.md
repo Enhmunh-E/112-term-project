@@ -1,15 +1,15 @@
-# Project Name: Minelorant
+# Project Name: PixelBuild
 
-Minelorant is a unique game concept that combines the block-building mechanics of Minecraft with the competitive gunplay style of Valorant. This hybrid gameplay creates an immersive experience where players can engage in both world-building and strategic combat.
+PixelBuild is a unique game concept that combines the block-building mechanics of Minecraft with the competitive gunplay style of Valorant. This hybrid gameplay creates an immersive experience where players can engage in both world-building and strategic combat.
 
 ## What does the game do:
 
-Minelorant is a voxel-based game that allows players to interact with a dynamic 3D world. Players can:
+PixelBuild is a voxel-based game that allows players to interact with a dynamic 3D world. Players can:
 
 - Place, delete, or modify blocks to shape their environment.
 - Engage in combat using a variety of weapons, blending creativity with competitive gameplay.
 
-This combination of sandbox-style building and tactical gunplay makes Minelorant a versatile and engaging experience for players who enjoy both genres.
+This combination of sandbox-style building and tactical gunplay makes PixelBuild a versatile and engaging experience for players who enjoy both genres.
 
 ## Competitive Analysis:
 

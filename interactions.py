@@ -25,23 +25,23 @@ def game_onKeyHold(app, keys):
         app.camera.changePositionZ(app.camera.position[2] - 0.4)
     stepX, stepY, stepZ = getDirLengths(app.camera.orientation)
     if "w" in keys:
-        app.camera.changePositionX(app.camera.position[0] - stepX)
-        app.camera.changePositionY(app.camera.position[1] - stepY)
-        app.camera.changePositionZ(app.camera.position[2] - stepZ)
+        app.camera.changePositionX(app.camera.position[0] - stepX * 0.4)
+        app.camera.changePositionY(app.camera.position[1] - stepY * 0.4)
+        app.camera.changePositionZ(app.camera.position[2] - stepZ * 0.4)
     if "s" in keys:
-        app.camera.changePositionX(app.camera.position[0] + stepX)
-        app.camera.changePositionY(app.camera.position[1] + stepY)
-        app.camera.changePositionZ(app.camera.position[2] + stepZ)
+        app.camera.changePositionX(app.camera.position[0] + stepX * 0.4)
+        app.camera.changePositionY(app.camera.position[1] + stepY * 0.4)
+        app.camera.changePositionZ(app.camera.position[2] + stepZ * 0.4)
     if "a" in keys:
         stepY = math.sin(app.camera.orientation[2] - math.pi / 2)
         stepX = math.cos(app.camera.orientation[2] - math.pi / 2)
-        app.camera.changePositionX(app.camera.position[0] + stepX)
-        app.camera.changePositionY(app.camera.position[1] + stepY)
+        app.camera.changePositionX(app.camera.position[0] + stepX * 0.4)
+        app.camera.changePositionY(app.camera.position[1] + stepY * 0.4)
     if "d" in keys:
         stepY = math.sin(app.camera.orientation[2] + math.pi / 2)
         stepX = math.cos(app.camera.orientation[2] + math.pi / 2)
-        app.camera.changePositionX(app.camera.position[0] + stepX)
-        app.camera.changePositionY(app.camera.position[1] + stepY)
+        app.camera.changePositionX(app.camera.position[0] + stepX * 0.4)
+        app.camera.changePositionY(app.camera.position[1] + stepY * 0.4)
     app.selectedBlockPosition = None
 
 
@@ -98,7 +98,10 @@ def game_onKeyPress(app, key):
 
 
 def start_onMousePress(app, mouseX, mouseY, label):
-    if 500 >= mouseX >= 300 and 450 <= mouseY <= 650:
+    if (
+        400 + 175 / 2 >= mouseX >= 400 - 175 / 2
+        and 520 - 55 / 2 <= mouseY <= 520 + 55 / 2
+    ):
         app.clickSound.play(restart=True)
         setActiveScreen("menu")
 

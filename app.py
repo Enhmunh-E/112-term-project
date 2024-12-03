@@ -135,7 +135,7 @@ def game_onStep(app):
 def start_redrawAll(app):
     drawImage("./assets/main.png", 0, 0)
     drawImage(notes[app.selectedNote], 528.62, 92.45)
-    drawButton(app, "Play", 175, 55, WIDTH / 2, 550)
+    drawButton(app, "Play", 175, 55, WIDTH / 2, 520)
 
 
 def drawButton(app, label, width, height, x, y, size=32):
@@ -228,7 +228,6 @@ def menu_onMousePress(app, mouseX, mouseY, label):
     if 187.5 - 275 / 2 < mouseX < 187.5 + 275 / 2:
         if 747.5 - 55 / 2 < mouseY < 747.5 + 55 / 2:
             app.clickSound.play(restart=True)
-            print("Create New World")
             createWorld(app)
     if 387.5 - 105 / 2 < mouseX < 387.5 + 105 / 2:
         if 747.5 - 55 / 2 < mouseY < 747.5 + 55 / 2:
@@ -241,7 +240,6 @@ def menu_onMousePress(app, mouseX, mouseY, label):
                 app.clickSound.play(restart=True)
                 initializeGame(app)
                 loadWorld(app, app.worlds[app.selectedWorld]["name"])
-                print("Play Selected World")
                 setActiveScreen("game")
 
 
