@@ -14,7 +14,7 @@
 import math
 import time
 import json
-
+import random as rand
 
 from cmu_graphics import *
 from classes import *
@@ -38,6 +38,11 @@ colors = [
     "blue",
 ]
 
+notes = [
+    "./assets/shakeItOff.png",
+    "./assets/cursedClash.png",
+]
+
 
 def onAppStart(app):
     # app.setMaxShapeCount(100000)
@@ -50,6 +55,7 @@ def onAppStart(app):
     app.deleteSound = Sound("./assets/break.mp3")
     app.placeSound = Sound("./assets/place.mp3")
     app.clickSound = Sound("./assets/click.mp3")
+    app.selectedNote = rand.randint(0, len(notes) - 1)
 
     # for i in range(-7, 8):
     #     for j in range(-7, 8):
@@ -128,6 +134,7 @@ def game_onStep(app):
 
 def start_redrawAll(app):
     drawImage("./assets/main.png", 0, 0)
+    drawImage(notes[app.selectedNote], 528.62, 92.45)
     drawButton(app, "Play", 175, 55, WIDTH / 2, 550)
 
 
