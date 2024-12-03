@@ -134,7 +134,7 @@ def getPositionOnScreen(app, pos):
     )
 
     # Discard points behind the camera or outside clipping planes
-    near_plane, far_plane = 0.1, 1000
+    near_plane, far_plane = 0.1, 30
     if Z >= 0 or Z < -far_plane or Z > -near_plane:
         return None
 
@@ -308,9 +308,11 @@ def updatePlanePointsOnScreen(app):
 
 baseWorldFile = {
     "name": "World 1",
-    "cameraPosition": [2, 0, 0],
-    "cameraOrientation": [0, 1.5707963267948966, 0],
-    "world": [[[0, 0, 0], "brown"]],
+    "cameraPosition": [1.7225707558611005, -1.8444877952156686, 2.0614328621196805],
+    "cameraOrientation": [0, 0.8656833089891954, -0.8290313946973075],
+    # "cameraPosition": [2, 0, 0],
+    # "cameraOrientation": [0, 1.5707963267948966, 0],
+    "world": [[[0, 0, 0], "darkRed"]],
 }
 
 

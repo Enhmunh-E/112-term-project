@@ -39,8 +39,16 @@ colors = [
 ]
 
 notes = [
-    "./assets/shakeItOff.png",
-    "./assets/cursedClash.png",
+    "./assets/start_labels/shakeItOff.png",
+    "./assets/start_labels/cursedClash.png",
+    "./assets/start_labels/notSoSuperMario.png",
+    "./assets/start_labels/hue.png",
+    "./assets/start_labels/slay.png",
+    "./assets/start_labels/balleywag.png",
+    "./assets/start_labels/2012memes.png",
+    "./assets/start_labels/return42.png",
+    "./assets/start_labels/defbob.png",
+    "./assets/start_labels/bingqilin.png",
 ]
 
 
@@ -52,29 +60,12 @@ def onAppStart(app):
     app.mouseX = 0
     app.mouseY = 0
     app.selectedWorld = 0
-    app.deleteSound = Sound("./assets/break.mp3")
-    app.placeSound = Sound("./assets/place.mp3")
-    app.clickSound = Sound("./assets/click.mp3")
+    app.deleteSound = Sound("./assets/sounds/break.mp3")
+    app.placeSound = Sound("./assets/sounds/place.mp3")
+    app.clickSound = Sound("./assets/sounds/click.mp3")
+    app.backgroundSound = Sound("./assets/sounds/sweden.mp3")
     app.selectedNote = rand.randint(0, len(notes) - 1)
-
-    # for i in range(-7, 8):
-    #     for j in range(-7, 8):
-    #         app.world.createBlock((i, j, 0), "green")
-    # app.world.createBlock((0, 0, 1), "brown")
-    # app.world.createBlock((0, 0, 2), "brown")
-    # app.world.createBlock((0, 0, 6), "brown")
-    # for i in range(-2, 3):
-    #     for j in range(-2, 3):
-    #         for l in range(2):
-    #             app.world.createBlock((i, j, 3 + l), "brown")
-    # for i in range(-1, 2):
-    #     for j in range(-1, 2):
-    #         app.world.createBlock((i, j, 5), "brown")
-
-    # app.world.createBlock((-1, 0, 6), "brown")
-    # app.world.createBlock((1, 0, 6), "brown")
-    # app.world.createBlock((0, -1, 6), "brown")
-    # app.world.createBlock((0, 1, 6), "brown")
+    app.backgroundSound.play(restart=True, loop=True)
 
 
 def drawPlane(plane, selected, color):

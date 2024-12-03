@@ -122,9 +122,11 @@ def start_onMouseMove(app, mouseX, mouseY):
 def menu_onKeyPress(app, key):
     if key == "up":
         if app.selectedWorld != 0:
+            app.clickSound.play(restart=True)
             app.selectedWorld -= 1
     if key == "down":
         if app.selectedWorld < len(app.worlds) - 1:
+            app.clickSound.play(restart=True)
             app.selectedWorld += 1
     if key == "escape":
         app.clickSound.play(restart=True)
