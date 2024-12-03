@@ -89,6 +89,7 @@ def game_onKeyPress(app, key):
         else:
             app.selectedColorIndex = keyNum - 1
     if key == "escape":
+        app.clickSound.play(restart=True)
         saveWorld(app)
         setActiveScreen("menu")
 
@@ -98,6 +99,7 @@ def game_onKeyPress(app, key):
 
 def start_onMousePress(app, mouseX, mouseY, label):
     if 500 >= mouseX >= 300 and 450 <= mouseY <= 650:
+        app.clickSound.play(restart=True)
         setActiveScreen("menu")
 
 
@@ -122,6 +124,7 @@ def menu_onKeyPress(app, key):
         if app.selectedWorld < len(app.worlds) - 1:
             app.selectedWorld += 1
     if key == "escape":
+        app.clickSound.play(restart=True)
         setActiveScreen("start")
 
 

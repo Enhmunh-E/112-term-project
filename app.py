@@ -49,6 +49,7 @@ def onAppStart(app):
     app.selectedWorld = 0
     app.deleteSound = Sound("./assets/break.mp3")
     app.placeSound = Sound("./assets/place.mp3")
+    app.clickSound = Sound("./assets/click.mp3")
 
     # for i in range(-7, 8):
     #     for j in range(-7, 8):
@@ -219,15 +220,18 @@ def initializeGame(app):
 def menu_onMousePress(app, mouseX, mouseY, label):
     if 187.5 - 275 / 2 < mouseX < 187.5 + 275 / 2:
         if 747.5 - 55 / 2 < mouseY < 747.5 + 55 / 2:
+            app.clickSound.play(restart=True)
             print("Create New World")
             createWorld(app)
     if 387.5 - 105 / 2 < mouseX < 387.5 + 105 / 2:
         if 747.5 - 55 / 2 < mouseY < 747.5 + 55 / 2:
             if len(app.worlds) > app.selectedWorld:
+                app.clickSound.play(restart=True)
                 deleteWorld(app.worlds[app.selectedWorld]["name"])
     if 600 - 300 / 2 < mouseX < 600 + 300 / 2:
         if 747.5 - 55 / 2 < mouseY < 747.5 + 55 / 2:
             if len(app.worlds) > app.selectedWorld:
+                app.clickSound.play(restart=True)
                 initializeGame(app)
                 loadWorld(app, app.worlds[app.selectedWorld]["name"])
                 print("Play Selected World")
